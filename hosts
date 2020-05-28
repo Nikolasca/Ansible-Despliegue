@@ -1,0 +1,2 @@
+[servidores]
+cliente ansible_ssh_host=54.175.74.237

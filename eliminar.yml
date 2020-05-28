@@ -1,0 +1,15 @@
+- hosts: servidores
+  become: true
+  tasks:
+  - name: Eliminar config v1
+    file: 
+      path: /usr/share/nginx/html/v1.txt 
+      state: absent
+  
+  - name: Eliminar config v2
+    file: 
+      path: /usr/share/nginx/html/v2.txt 
+      state: absent
+
+  - name: Eliminar Servidor
+    shell: "sudo yum remove nginx -y"

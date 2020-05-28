@@ -1,0 +1,111 @@
+
+- name: Check servidor Nginx 
+  stat:
+   path: /etc/nginx/nginx.conf
+  register: n
+
+- debug:
+    msg: "Nginx instalado"
+  when: n.stat.exists
+- debug:
+    msg: "Nginx no instalado, instalando..."
+  when: not n.stat.exists 
+
+- name: Start the AdminServer
+  become: yes
+  shell: "sudo amazon-linux-extras install nginx1.12 -y"
+
+- name: Check carpeta destino 
+  stat:
+   path: /usr/share/nginx/html
+  register: html
+
+- debug:
+    msg: "Existe la carpete destino, copiando archivos"
+  when: html.stat.isdir
+- fail:
+    msg: La carpeta destino no existe
+  when: not html.stat.isdir
+
+- name: Check v1 
+  stat:
+   path: /usr/share/nginx/html/v1.txt
+  register: p
+
+- name: Check v2 
+  stat:
+   path: /usr/share/nginx/html/v2.txt
+  register: b
+
+- debug:
+    msg: "Existe la v1, copiando V2"
+  when: p.stat.exists and not b.stat.exists
+- debug:
+    msg: "No existe la v1, copiando V1"
+  when: p.stat.exists == False
+- debug:
+    msg: "Ya existe la versión 2, no queda cambios por aplicar"
+  when: b.stat.exists 
+
+- name: Creando archivo de configuracion v1
+  file:
+    path: /usr/share/nginx/html/v1.txt
+    state: touch
+  when: p.stat.exists == false
+
+- name: Desplegando archivos version 1.0
+  copy:
+    src: "{{ role_path }}/files/index.html"
+    dest: /usr/share/nginx/html/index.html
+  when: p.stat.exists == False and not b.stat.exists
+
+- name: Creando archivo de configuracion v2
+  file:
+    path: /usr/share/nginx/html/v2.txt
+    state: touch
+  when: p.stat.exists == true and not b.stat.exists
+
+- name: Copiar la versión 2
+  copy:
+    src: "{{ role_path }}/filesV2/index.html"
+    dest: /usr/share/nginx/html/index.html
+  when: p.stat.exists == true and not b.stat.exists 
+- name: Iniciando servidor web
+  service:
+      name: nginx
+      state: started
+  register: service
+- fail:
+    msg: Error al iniciar el servidor nginx
+  when: "'started' not in service.state"
+
+- name: Checking v2 again 
+  stat:
+   path: /usr/share/nginx/html/v2.txt
+  register: b2
+- name: Checking v1 again 
+  stat:
+   path: /usr/share/nginx/html/v1.txt
+  register: p2
+
+ 
+- name: Checking html 
+  stat:
+   path: /usr/share/nginx/html/index.html
+  register: index
+
+- debug:
+    msg: "Todos los archivos en la carpeta destino"
+  when: p.stat.exists and  b2.stat.exists and index.stat.exists
+
+- debug:
+    var: service.state
+- debug:
+    msg: "Operacion finalizada con exito"
+- debug:
+    msg: "Despligue versión 1.0 realizada con éxito"
+  when: p2.stat.exists and not b2.stat.exists
+- debug:
+    msg: "Despligue versión 2.0 realizada con éxito"
+  when: p.stat.exists and  b2.stat.exists
+  
